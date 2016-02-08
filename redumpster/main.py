@@ -5,12 +5,12 @@
 Import, export, backup and update data.
 
 Usage:
-  redumpster [options] dump --config=<CONFIG> --to=<DUMP_DIR> --tagged=<TAG>
-  redumpster [options] restore --config=<CONFIG> --from=<DUMP_DIR> --tagged=<TAG>
+  redumpster [options] dump --config=<CONFIG> --to=<DUMP_DIR>
+  redumpster [options] restore --config=<CONFIG> --from=<DUMP_DIR>
   redumpster -h | --help
 
 Global Options:
-     --tagged=<TAG>        Which tagged data interfaces to select for restoration or dumping. Default: ''
+     --tagged=<TAG>        Which tagged data interfaces to select for restoration or dumping. [default: ]
      --config=<CONFIG>     Configuration file that specifies what should be backed up.
                            
   -h --help                Show this screen.
@@ -51,10 +51,10 @@ def main():
     assert path.exists(arguments['--config']), "No config file found"
     config = ConfigObj(arguments['--config'])
     if arguments['dump']:
-        for interface in interfaces_from_config(config, arguments['--to'], tag=arguments['--tag']):
+        for interface in interfaces_from_config(config, arguments['--to'], tag=arguments['--tagged']):
             interface.dump()
         shutil.copy2(arguments['--config'], path.join(arguments['--to']))
     
     if arguments['restore']:
-        for interface in interfaces_from_config(config, arguments['--from'], tag=arguments['--tag']):
+        for interface in interfaces_from_config(config, arguments['--from'], tag=arguments['--tagged']):
             interface.restore()
