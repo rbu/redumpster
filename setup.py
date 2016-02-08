@@ -8,7 +8,7 @@ setup(
     version='1.0.0',
     description='dump data. restore data. update dumps.',
     author='rbu',
-    license='BSD'
+    license='BSD',
     author_email='rbu@rbu.sh',
     py_modules=['redumpster'],
     test_suite="redumpster.tests",
