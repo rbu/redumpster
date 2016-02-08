@@ -28,6 +28,39 @@ class DataInterfaceFactoryTest(unittest.TestCase):
         directories = sorted(i.directory for i in interfaces)
         expect(directories[0].endswith('fnord/bar')).equals(True)
         expect(directories[1].endswith('fnord/foo')).equals(True)
+    
+    def test_should_filter_interfaces_by_tags(self):
+        from collections import OrderedDict # easier to test if iteration order isn't randomly different…
+        config = OrderedDict()
+        config['first'] = dict(interface_name='noop', tags=['foo', 'bar'])
+        config['second'] = dict(interface_name='noop', tags=['bar'])
+        config['third'] = dict(interface_name='noop', tags=['foo'])
+        
+        interfaces = interfaces_from_config(config, 'unused_directory', tag='foo')
+        expect(interfaces).has_length(2)
+        expect(interfaces[0].backup_name) == 'first'
+        expect(interfaces[1].backup_name) == 'third'
+        
+        interfaces = interfaces_from_config(config, 'unused_directory', tag='bar')
+        expect(interfaces).has_length(2)
+        expect(interfaces[0].backup_name) == 'first'
+        expect(interfaces[1].backup_name) == 'second'
+        
+        # ensure other parsing of tags works too
+        config = OrderedDict()
+        config['first'] = dict(interface_name='noop', tags='foo, bar')
+        config['second'] = dict(interface_name='noop', tags='bar')
+        config['third'] = dict(interface_name='noop', tags='foo')
+        
+        interfaces = interfaces_from_config(config, 'unused_directory', tag='foo')
+        expect(interfaces).has_length(2)
+        expect(interfaces[0].backup_name) == 'first'
+        expect(interfaces[1].backup_name) == 'third'
+        
+        interfaces = interfaces_from_config(config, 'unused_directory', tag='bar')
+        expect(interfaces).has_length(2)
+        expect(interfaces[0].backup_name) == 'first'
+        expect(interfaces[1].backup_name) == 'second'
 
 class DataInterfaceTest(unittest.TestCase):
     def test_should_make_data_interfaces(self):

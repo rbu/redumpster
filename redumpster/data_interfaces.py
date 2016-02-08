@@ -11,11 +11,15 @@ from .utils import same_file_system
 class UnknownDataInterfaceError(Exception):
     pass
 
+def are_interface_options_tagged_with_tag(options, tag):
+    return 'tags' in options and tag in options['tags']
 
-def interfaces_from_config(config, directory):
+def interfaces_from_config(config, directory, tag=''):
     interfaces = []
     for backup_name, options in config.items():
         interface_name = options['interface_name']
+        if tag != '' and not are_interface_options_tagged_with_tag(options, tag):
+            continue
         interfaces.append(DataInterface.make_data_interface(
             directory, interface_name, backup_name, options))
     return interfaces
@@ -51,6 +55,11 @@ class DataInterface(object):
         self.config.merge(dict(options=options or dict()))
         
         self.sh = sh
+    
+    @property
+    def backup_name(self):
+        # REFACT consider to save this separately? --mh
+        return path.basename(self.directory)
     
     def default_options(self):
         return dict(name="")
