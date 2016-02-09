@@ -13,6 +13,7 @@ def touch(a_path):
      open(a_path, 'a').close()
 
 class DataInterfaceFactoryTest(unittest.TestCase):
+    
     def test_should_instantiate_multiple_interfaces(self):
         config = dict(
             foo=dict(
@@ -63,6 +64,7 @@ class DataInterfaceFactoryTest(unittest.TestCase):
         expect(interfaces[1].backup_name) == 'second'
 
 class DataInterfaceTest(unittest.TestCase):
+    
     def test_should_make_data_interfaces(self):
         data_interface = DataInterface.make_data_interface(
             'dir', 'noop', 'fnord', dict(foo='bar'))
@@ -189,6 +191,27 @@ class PostgreSQLDumpTest(unittest.TestCase):
     
 
 class DirectoryTest(unittest.TestCase):
+    
+    def setUp(self):
+        super()
+        """Lets have a safeguard, that we don't just delete our own home 
+        directories when we fuck up something with rsync and run the testsuite."""
+        original_default_rsync_args = self.original_default_rsync_args = CopyDirectory._default_rsync_args
+        def safer(self):
+            return { key: value for key, value 
+                in original_default_rsync_args(self).items()
+                if 'delete' not in key }
+        CopyDirectory._default_rsync_args = safer
+    
+    def tearDown(self):
+        CopyDirectory._default_rsync_args = self.original_default_rsync_args
+    
+    def test_ensure_default_args_to_rsync_are_safe(self):
+        interface = CopyDirectory(directory='/foo', options=dict(source='/bar'))
+        default_arguments = interface._default_rsync_args()
+        for key in default_arguments.keys():
+            expect(key).does_not.contain('delete')
+    
     @tempdir()
     def test_should_hard_link_directory_to_copy(self, tempdir):
         production_directory = join(tempdir.path, 'production')
@@ -222,37 +245,6 @@ class DirectoryTest(unittest.TestCase):
         expect(exists(join(production_directory, 'important_file'))) == False
         restore.restore()
         expect(exists(join(production_directory, 'important_file'))) == True
-    
-    @tempdir()
-    def test_should_restore_to_temporary_directory(self, tempdir):
-        production_directory = tempdir.path
-        backup_dir = join(tempdir.path, 'backup')
-        home_directory = join(tempdir.path, 'home')
-        restore = CopyDirectory(backup_dir, options=dict(
-            source=production_directory
-        ))
-        
-        os.makedirs(join(backup_dir, 'important_file'))
-        os.mkdir(home_directory)
-        
-        expect(exists(join(production_directory, 'important_file'))) == False
-        to = restore.restore(home=home_directory)
-        expect(exists(join(production_directory, 'important_file'))) == False
-        expect(os.listdir(home_directory)).has_length(1)
-        expect(exists(join(to, 'important_file'))) == True
-    
-    @tempdir()
-    def test_should_know_whether_to_restore_to_source(self, tempdir):
-        restore = CopyDirectory(None, options=dict(
-            source=tempdir.path
-        ))
-        
-        expect(restore.should_restore_to_source()) == False
-        touch(join(tempdir.path, '.redumpster_managed'))
-        expect(restore.should_restore_to_source()) == True
-        
-        restore.config['options']['source'] = join(tempdir.path, 'some/other/directory')
-        expect(restore.should_restore_to_source()) == True
     
     @tempdir()
     def test_ensures_hard_link_path_is_always_absolute(self, tempdir):
@@ -305,6 +297,9 @@ class DirectoryTest(unittest.TestCase):
     
     @tempdir()
     def test_will_remove_files_not_in_backup_in_redumpster_managed_directories(self, tempdir):
+        # Dangerous this test is, as it actually deletes files from the disk.
+        CopyDirectory._default_rsync_args = self.original_default_rsync_args
+        
         with change_working_directory_to(tempdir.path):
             production_directory = 'production'
             backup_directory = 'backup'

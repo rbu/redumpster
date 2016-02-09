@@ -180,25 +180,11 @@ class CopyDirectory(DataInterface):
             **self._default_rsync_args()
         )
     
-    def should_restore_to_source(self):
-        source = self.config['options']['source']
-        try:
-            os.makedirs(source)
-        except FileExistsError:
-            if isfile(join(source, '.redumpster_managed')):
-                return True
-            return False
-        return True
-    
     def restore(self, home='~'):
         super().restore()
         
         home = expanduser(home)
-        if self.should_restore_to_source():
-            restore_to = normpath(self.config['options']['source'])
-        else:
-            prefix = "redumpster_%s_" % (path.basename(self.directory) or 'copydir')
-            restore_to = tempfile.mkdtemp(dir=home, prefix=prefix)
+        restore_to = normpath(self.config['options']['source'])
         
         self.sh.rsync(
             self.directory + '/', restore_to,
